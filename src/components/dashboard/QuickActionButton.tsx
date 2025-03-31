@@ -16,7 +16,10 @@ const QuickActionButton = ({
   bgColor = "bg-primary/10" 
 }: QuickActionButtonProps) => {
   return (
-    <Link to={to} className="quick-action-button">
+    <Link 
+      to={to} 
+      className="flex flex-col items-center gap-2 p-3 rounded-lg transition-all hover:bg-gray-100"
+    >
       <div className={`h-12 w-12 rounded-full flex items-center justify-center ${bgColor}`}>
         {icon}
       </div>
