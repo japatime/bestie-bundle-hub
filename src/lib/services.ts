@@ -1,31 +1,45 @@
 
-// This file will contain API integration functions
-// for airtime, data, electricity, TV, and followers services
+// This file contains API integration functions for services 
 
 /**
  * Interface for API responses
  */
-interface ApiResponse {
-  status: boolean;
+export interface ApiResponse {
+  success: boolean;
+  status: string;
   message: string;
-  data?: any;
+  details?: any;
 }
 
 /**
  * Base URL for API requests 
  */
-const API_BASE_URL = 'https://airtimenigeria.com/app/api';
+const API_BASE_URL = 'https://www.airtimenigeria.com/api/v1';
+
+// The API token should ideally be stored in a backend service
+// This is only for demo purposes
+const API_TOKEN = '922|6Tydbi6ek1BB9JeNDhWXxyz9kz4L7iFXJ3f6vBGQ';
 
 /**
  * Fetches available data plans for a specific network
  */
 export const getDataPlans = async (network: string): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/data-plans?network=${network}`);
+    const response = await fetch(`${API_BASE_URL}/data/plans?network=${network}`, {
+      headers: {
+        'Authorization': `Bearer ${API_TOKEN}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
     return await response.json();
   } catch (error) {
     console.error('Error fetching data plans:', error);
-    return { status: false, message: 'Failed to fetch data plans' };
+    return { 
+      success: false, 
+      status: 'failed', 
+      message: 'Failed to fetch data plans' 
+    };
   }
 };
 
@@ -33,29 +47,38 @@ export const getDataPlans = async (network: string): Promise<ApiResponse> => {
  * Purchases airtime
  */
 export const purchaseAirtime = async (
-  network: string, 
-  phoneNumber: string,
+  network_operator: string, 
+  phone: string,
   amount: number,
-  apiToken: string
+  max_amount?: number
 ): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/create`, {
+    // Set max_amount slightly higher than amount to ensure the transaction goes through
+    const maxAmount = max_amount || Math.ceil(amount * 0.99);
+    
+    const response = await fetch(`${API_BASE_URL}/airtime`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiToken}`
+        'Authorization': `Bearer ${API_TOKEN}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        service: 'airtime',
-        network,
-        phoneNumber,
-        amount
+        network_operator,
+        phone,
+        amount,
+        max_amount: String(maxAmount)
       })
     });
+    
     return await response.json();
   } catch (error) {
     console.error('Error purchasing airtime:', error);
-    return { status: false, message: 'Failed to purchase airtime' };
+    return { 
+      success: false, 
+      status: 'failed', 
+      message: 'Failed to purchase airtime' 
+    };
   }
 };
 
@@ -63,30 +86,66 @@ export const purchaseAirtime = async (
  * Purchases data plan
  */
 export const purchaseData = async (
-  network: string,
-  phoneNumber: string,
-  planId: string,
-  apiToken: string
+  phone: string,
+  package_code: string,
+  max_amount?: string
 ): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/create`, {
+    const response = await fetch(`${API_BASE_URL}/data`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiToken}`
+        'Authorization': `Bearer ${API_TOKEN}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        service: 'data',
-        network,
-        phoneNumber,
-        planId
+        phone,
+        package_code,
+        max_amount: max_amount || "5000" // Default max amount
       })
     });
+    
     return await response.json();
   } catch (error) {
     console.error('Error purchasing data plan:', error);
-    return { status: false, message: 'Failed to purchase data plan' };
+    return { 
+      success: false, 
+      status: 'failed', 
+      message: 'Failed to purchase data plan' 
+    };
   }
 };
 
-// More API functions can be added here for electricity, TV, followers, etc.
+/**
+ * Vends data from data wallet
+ */
+export const vendDataFromWallet = async (
+  phone: string,
+  package_code: string,
+  process_type: 'instant' | 'queue' = 'instant'
+): Promise<ApiResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/data/wallet`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${API_TOKEN}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        phone,
+        package_code,
+        process_type
+      })
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error vending data from wallet:', error);
+    return { 
+      success: false, 
+      status: 'failed', 
+      message: 'Failed to vend data from wallet' 
+    };
+  }
+};

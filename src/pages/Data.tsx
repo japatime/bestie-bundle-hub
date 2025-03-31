@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import MobileNav from "@/components/layout/MobileNav";
 import { useLocation } from "react-router-dom";
@@ -12,31 +12,75 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { purchaseAirtime } from "@/lib/services";
-import { Loader, Phone, Check, X } from "lucide-react";
+import { getDataPlans, purchaseData, vendDataFromWallet } from "@/lib/services";
+import { Loader, Phone, Check, X, Wifi } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const Airtime = () => {
+interface DataPlan {
+  id: number;
+  name: string;
+  code: string;
+  price: number;
+  validity: string;
+}
+
+const Data = () => {
   const location = useLocation();
   const { toast } = useToast();
-  const { walletBalance, purchaseAirtime: purchaseAirtimeFromWallet } = useWallet();
+  const { walletBalance, purchaseData: purchaseDataFromWallet } = useWallet();
   
   const [network, setNetwork] = useState("mtn");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [amount, setAmount] = useState(500);
-  const [useMaxAmount, setUseMaxAmount] = useState(false);
   const [loading, setLoading] = useState(false);
   const [useWalletBalance, setUseWalletBalance] = useState(true);
+  const [dataPlans, setDataPlans] = useState<DataPlan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<DataPlan | null>(null);
+  const [loadingPlans, setLoadingPlans] = useState(false);
   
-  const maxAmount = 50000;
-  
-  const handleBuyAirtime = async () => {
+  // Fetch data plans when network changes
+  useEffect(() => {
+    const fetchDataPlans = async () => {
+      setLoadingPlans(true);
+      try {
+        // In a real implementation, this would fetch from the API
+        // For now, we'll mock some data plans
+        const mockPlans = [
+          { id: 1, name: "1GB - 30 Days", code: `${network}_sme_1gb`, price: 300, validity: "30 days" },
+          { id: 2, name: "2GB - 30 Days", code: `${network}_sme_2gb`, price: 600, validity: "30 days" },
+          { id: 3, name: "5GB - 30 Days", code: `${network}_sme_5gb`, price: 1500, validity: "30 days" },
+          { id: 4, name: "10GB - 30 Days", code: `${network}_sme_10gb`, price: 2500, validity: "30 days" }
+        ];
+        
+        setDataPlans(mockPlans);
+        setSelectedPlan(null);
+      } catch (error) {
+        console.error("Error fetching data plans:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch data plans. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingPlans(false);
+      }
+    };
+    
+    fetchDataPlans();
+  }, [network, toast]);
+
+  const handleBuyData = async () => {
     if (!phoneNumber.trim()) {
       toast({
         title: "Error",
@@ -46,10 +90,10 @@ const Airtime = () => {
       return;
     }
 
-    if (phoneNumber.length < 10 || phoneNumber.length > 11) {
+    if (!selectedPlan) {
       toast({
         title: "Error",
-        description: "Please enter a valid phone number",
+        description: "Please select a data plan",
         variant: "destructive",
       });
       return;
@@ -60,12 +104,17 @@ const Airtime = () => {
     try {
       if (useWalletBalance) {
         // Use wallet balance for purchase
-        const success = await purchaseAirtimeFromWallet(network, phoneNumber, amount);
+        const success = await purchaseDataFromWallet(
+          network, 
+          phoneNumber, 
+          selectedPlan.code, 
+          selectedPlan.price
+        );
         
         if (success) {
           toast({
             title: "Purchase Successful",
-            description: `Airtime purchase of ₦${amount.toLocaleString()} for ${phoneNumber} completed.`,
+            description: `${selectedPlan.name} data purchase for ${phoneNumber} completed.`,
           });
         } else {
           toast({
@@ -76,7 +125,11 @@ const Airtime = () => {
         }
       } else {
         // Use direct API purchase
-        const response = await purchaseAirtime(network, phoneNumber, amount);
+        const response = await purchaseData(
+          phoneNumber, 
+          selectedPlan.code,
+          selectedPlan.price.toString()
+        );
         
         if (response.success) {
           toast({
@@ -92,7 +145,7 @@ const Airtime = () => {
         }
       }
     } catch (error) {
-      console.error("Error purchasing airtime:", error);
+      console.error("Error purchasing data:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -101,10 +154,6 @@ const Airtime = () => {
     } finally {
       setLoading(false);
     }
-  };
-  
-  const handleSliderChange = (value: number[]) => {
-    setAmount(value[0]);
   };
 
   const networks = [
@@ -120,8 +169,8 @@ const Airtime = () => {
       <MainLayout>
         <div className="pt-16 md:pt-0">
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold">Buy Airtime</h2>
-            <p className="text-muted-foreground">Purchase airtime for any phone number</p>
+            <h2 className="text-2xl font-semibold">Buy Data</h2>
+            <p className="text-muted-foreground">Purchase data for any phone number</p>
           </div>
 
           {useWalletBalance && (
@@ -136,9 +185,9 @@ const Airtime = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="md:col-span-2">
               <CardHeader>
-                <CardTitle>Airtime Purchase</CardTitle>
+                <CardTitle>Data Purchase</CardTitle>
                 <CardDescription>
-                  Buy airtime for yourself or someone else
+                  Buy data for yourself or someone else
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -175,31 +224,27 @@ const Airtime = () => {
                     </div>
                   </div>
 
-                  {/* Amount Selection */}
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <Label>Amount (₦)</Label>
-                      <span className="text-sm font-medium">₦{amount.toLocaleString()}</span>
-                    </div>
-                    <Slider 
-                      min={50} 
-                      max={maxAmount} 
-                      step={50} 
-                      value={[amount]}
-                      onValueChange={handleSliderChange}
-                      disabled={useMaxAmount}
-                    />
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        id="max-amount" 
-                        checked={useMaxAmount}
-                        onCheckedChange={(checked) => {
-                          setUseMaxAmount(checked);
-                          if (checked) setAmount(maxAmount);
-                        }}
-                      />
-                      <Label htmlFor="max-amount">Use maximum amount (₦{maxAmount.toLocaleString()})</Label>
-                    </div>
+                  {/* Data Plan Selection */}
+                  <div className="space-y-2">
+                    <Label>Select Data Plan</Label>
+                    <Select 
+                      onValueChange={(value) => {
+                        const plan = dataPlans.find(p => p.id === parseInt(value));
+                        setSelectedPlan(plan || null);
+                      }}
+                      value={selectedPlan?.id.toString()}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={loadingPlans ? "Loading plans..." : "Select a data plan"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dataPlans.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id.toString()}>
+                            {plan.name} - ₦{plan.price.toLocaleString()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Payment Method */}
@@ -225,8 +270,8 @@ const Airtime = () => {
                   {/* Submit Button */}
                   <Button 
                     className="w-full" 
-                    onClick={handleBuyAirtime} 
-                    disabled={loading}
+                    onClick={handleBuyData} 
+                    disabled={loading || !selectedPlan}
                   >
                     {loading ? (
                       <>
@@ -234,7 +279,7 @@ const Airtime = () => {
                         Processing...
                       </>
                     ) : (
-                      <>Buy Airtime</>
+                      <>Buy Data</>
                     )}
                   </Button>
                 </div>
@@ -257,12 +302,18 @@ const Airtime = () => {
                   <span className="font-medium">{phoneNumber || "---"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">₦{amount.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Data Plan</span>
+                  <span className="font-medium">{selectedPlan?.name || "---"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fee</span>
-                  <span className="font-medium">₦0.00</span>
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-medium">
+                    {selectedPlan ? `₦${selectedPlan.price.toLocaleString()}` : "---"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Validity</span>
+                  <span className="font-medium">{selectedPlan?.validity || "---"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Payment Method</span>
@@ -283,7 +334,9 @@ const Airtime = () => {
                 <div className="pt-4 border-t">
                   <div className="flex justify-between text-lg">
                     <span>Total</span>
-                    <span className="font-bold">₦{amount.toLocaleString()}</span>
+                    <span className="font-bold">
+                      {selectedPlan ? `₦${selectedPlan.price.toLocaleString()}` : "---"}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -295,4 +348,4 @@ const Airtime = () => {
   );
 };
 
-export default Airtime;
+export default Data;

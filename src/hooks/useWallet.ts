@@ -41,20 +41,94 @@ export interface Transaction {
 interface UseWalletReturn {
   walletBalance: WalletBalanceData;
   recentTransactions: Transaction[];
+  purchaseAirtime: (network: string, phoneNumber: string, amount: number) => Promise<boolean>;
+  purchaseData: (network: string, phoneNumber: string, packageCode: string, amount: number) => Promise<boolean>;
+  addTransaction: (type: string, amount: number) => void;
 }
 
 export const useWallet = (): UseWalletReturn => {
   // In a real app, this would fetch data from an API
-  const [walletBalance] = useState<WalletBalanceData>({
+  const [walletBalance, setWalletBalance] = useState<WalletBalanceData>({
     naira: mockWalletData.naira,
     data: mockWalletData.data,
     sms: mockWalletData.sms
   });
   
-  const [recentTransactions] = useState<Transaction[]>(mockWalletData.transactions);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(mockWalletData.transactions);
+
+  // Add a new transaction to the list
+  const addTransaction = (type: string, amount: number) => {
+    const newTransaction = {
+      id: Date.now(),
+      type,
+      amount,
+      date: new Date().toISOString().split('T')[0],
+      status: "Completed"
+    };
+
+    setRecentTransactions(prevTransactions => 
+      [newTransaction, ...prevTransactions]
+    );
+
+    // Update wallet balance based on transaction type
+    setWalletBalance(prevBalance => {
+      if (type.includes("Airtime") || type.includes("Data")) {
+        // Deduct from naira balance for purchases
+        return {
+          ...prevBalance,
+          naira: prevBalance.naira - Math.abs(amount)
+        };
+      } else if (type === "Deposit") {
+        // Add to naira balance for deposits
+        return {
+          ...prevBalance,
+          naira: prevBalance.naira + amount
+        };
+      }
+      return prevBalance;
+    });
+  };
+
+  // Purchase airtime from wallet balance
+  const purchaseAirtime = async (
+    network: string, 
+    phoneNumber: string, 
+    amount: number
+  ): Promise<boolean> => {
+    // Check if wallet has enough balance
+    if (walletBalance.naira < amount) {
+      return false;
+    }
+
+    // In a real app, this would call the actual API
+    // For demo, we'll simulate success and update the local state
+    addTransaction("Airtime Purchase", -amount);
+    return true;
+  };
+
+  // Purchase data from wallet balance
+  const purchaseData = async (
+    network: string, 
+    phoneNumber: string, 
+    packageCode: string, 
+    amount: number
+  ): Promise<boolean> => {
+    // Check if wallet has enough balance
+    if (walletBalance.naira < amount) {
+      return false;
+    }
+
+    // In a real app, this would call the actual API
+    // For demo, we'll simulate success and update the local state
+    addTransaction("Data Purchase", -amount);
+    return true;
+  };
 
   return {
     walletBalance,
-    recentTransactions
+    recentTransactions,
+    purchaseAirtime,
+    purchaseData,
+    addTransaction
   };
 };
