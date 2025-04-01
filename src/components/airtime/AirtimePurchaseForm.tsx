@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 const formSchema = z.object({
   phone: z.string().min(11).max(11),
   network: z.string().min(1),
-  amount: z.string().min(1).transform(val => Number(val)),
+  amount: z.coerce.number().min(1), // Using coerce.number() to ensure type conversion
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -31,7 +31,7 @@ const AirtimePurchaseForm = () => {
     defaultValues: {
       phone: "",
       network: "MTN",
-      amount: "",
+      amount: 0, // Changed from "" to 0 to match the number type
     },
   });
 
@@ -128,7 +128,13 @@ const AirtimePurchaseForm = () => {
               <FormItem>
                 <FormLabel>Amount (₦)</FormLabel>
                 <FormControl>
-                  <Input type="number" min="50" placeholder="Enter amount" {...field} />
+                  <Input 
+                    type="number" 
+                    min="50" 
+                    placeholder="Enter amount" 
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
