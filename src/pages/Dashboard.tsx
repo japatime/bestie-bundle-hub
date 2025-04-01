@@ -8,12 +8,21 @@ import QuickActionButton from "@/components/dashboard/QuickActionButton";
 import QuickActionLink from "@/components/dashboard/QuickActionLink";
 import TransactionTable from "@/components/dashboard/TransactionTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wifi, Phone, Wallet, CreditCard, FileText, PlusCircle } from "lucide-react";
+import { Wifi, Phone, FileText, PlusCircle, Wallet } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { walletBalance, recentTransactions } = useWallet();
+
+  // Format transactions for the TransactionTable component
+  const formattedTransactions = recentTransactions.slice(0, 5).map(transaction => ({
+    id: transaction.id.toString(),
+    date: transaction.date,
+    type: transaction.type,
+    amount: transaction.amount > 0 ? `+₦${transaction.amount.toLocaleString()}` : `-₦${Math.abs(transaction.amount).toLocaleString()}`,
+    status: transaction.status as "Completed" | "Pending" | "Failed"
+  }));
 
   return (
     <>
@@ -72,7 +81,7 @@ const Dashboard = () => {
               <CardDescription>Your recent transactions for the past 30 days</CardDescription>
             </CardHeader>
             <CardContent>
-              <TransactionTable transactions={recentTransactions.slice(0, 5)} />
+              <TransactionTable transactions={formattedTransactions} />
             </CardContent>
           </Card>
         </div>

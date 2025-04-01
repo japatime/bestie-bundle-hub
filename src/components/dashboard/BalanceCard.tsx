@@ -1,26 +1,50 @@
 
 import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface BalanceCardProps {
-  title: string;
-  value: string;
-  color: string;
-  icon?: React.ReactNode;
+  balance: number;
+  dataBalances: {
+    mtn: number;
+    airtel: number;
+    glo: number;
+    mobile9: number;
+  };
 }
 
-const BalanceCard = ({ title, value, color, icon }: BalanceCardProps) => {
+const BalanceCard = ({ balance, dataBalances }: BalanceCardProps) => {
   return (
-    <div className="balance-card">
-      <div className="flex items-center gap-2 mb-2">
-        {icon && (
-          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${color}`}>
-            {icon}
+    <Card className="h-full">
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          <div>
+            <span className="text-sm text-muted-foreground">Wallet Balance</span>
+            <div className="text-2xl font-semibold">₦{balance.toLocaleString()}</div>
           </div>
-        )}
-        <span className="text-sm text-muted-foreground">{title}</span>
-      </div>
-      <p className="text-2xl font-semibold">{value}</p>
-    </div>
+          <div>
+            <span className="text-sm text-muted-foreground">Data Balance</span>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="flex justify-between text-xs border rounded p-2">
+                <span>MTN:</span>
+                <span>{dataBalances.mtn}GB</span>
+              </div>
+              <div className="flex justify-between text-xs border rounded p-2">
+                <span>Airtel:</span>
+                <span>{dataBalances.airtel}GB</span>
+              </div>
+              <div className="flex justify-between text-xs border rounded p-2">
+                <span>Glo:</span>
+                <span>{dataBalances.glo}GB</span>
+              </div>
+              <div className="flex justify-between text-xs border rounded p-2">
+                <span>9Mobile:</span>
+                <span>{dataBalances.mobile9}GB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
