@@ -18,7 +18,7 @@ export interface ApiResponse {
 const API_BASE_URL = 'https://www.airtimenigeria.com/api/v1';
 
 // The API token should ideally be stored in a backend service
-// This is only for demo purposes
+// Using the token provided by the user
 const API_TOKEN = '922|6Tydbi6ek1BB9JeNDhWXxyz9kz4L7iFXJ3f6vBGQ';
 
 /**

@@ -18,7 +18,7 @@ import { useWallet } from "@/hooks/useWallet";
 
 const Wallet = () => {
   const location = useLocation();
-  const { walletBalance, recentTransactions } = useWallet();
+  const { recentTransactions } = useWallet();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState("");
   const [amount, setAmount] = useState("");
@@ -47,11 +47,7 @@ const Wallet = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <WalletBalance 
-                  nairaBalance={walletBalance.naira}
-                  dataBalance={walletBalance.data}
-                  smsBalance={walletBalance.sms}
-                />
+                <WalletBalance />
 
                 <WalletTabs onSuccessfulPaymentInit={(url) => {
                   handlePaymentInitiation(url);

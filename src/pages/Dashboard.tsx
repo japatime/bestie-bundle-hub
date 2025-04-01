@@ -13,7 +13,7 @@ import { useWallet } from "@/hooks/useWallet";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { walletBalance, recentTransactions } = useWallet();
+  const { recentTransactions } = useWallet();
 
   // Format transactions for the TransactionTable component
   const formattedTransactions = recentTransactions.slice(0, 5).map(transaction => ({
@@ -32,16 +32,13 @@ const Dashboard = () => {
           {/* Balance and Quick Fund */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="md:col-span-2">
-              <BalanceCard
-                balance={walletBalance.naira}
-                dataBalances={walletBalance.data}
-              />
+              <BalanceCard />
             </div>
             <QuickActionButton
-              onClick={() => navigate("/wallet")}
-              icon={<PlusCircle className="h-6 w-6" />}
               title="Fund Wallet"
+              icon={<PlusCircle className="h-6 w-6" />}
               description="Add money to your wallet"
+              onClick={() => navigate("/wallet")}
             />
           </div>
 
