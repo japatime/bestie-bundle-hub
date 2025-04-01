@@ -6,17 +6,22 @@ import { API_BASE_URL, ApiResponse, getApiHeaders } from './config';
  */
 export const getWalletBalance = async (): Promise<ApiResponse> => {
   try {
+    console.log('Fetching wallet balance...');
+    
     const response = await fetch(`${API_BASE_URL}/balance`, {
       headers: getApiHeaders()
     });
     
-    return await response.json();
+    const result = await response.json();
+    console.log('Wallet balance response:', result);
+    
+    return result;
   } catch (error) {
     console.error('Error fetching wallet balance:', error);
     return { 
       success: false, 
       status: 'failed', 
-      message: 'Failed to fetch wallet balance' 
+      message: error instanceof Error ? error.message : 'Failed to fetch wallet balance' 
     };
   }
 };
@@ -30,9 +35,35 @@ export const chargeWallet = async (amount: number): Promise<{
   error?: string;
 }> => {
   try {
-    // In a real implementation, you would make an API call to charge the wallet
-    // For now, we'll simulate it by getting the balance and then calculating the new balance
+    console.log(`Charging wallet: ₦${amount}`);
     
+    // In a real implementation with an API that supports atomic transactions:
+    /*
+    const response = await fetch(`${API_BASE_URL}/wallet/charge`, {
+      method: 'POST',
+      headers: getApiHeaders(),
+      body: JSON.stringify({
+        amount,
+        reference: `airtime_${Date.now()}`
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.message || 'Failed to charge wallet'
+      };
+    }
+    
+    return {
+      success: true,
+      newBalance: result.data.new_balance
+    };
+    */
+    
+    // For now, we'll simulate it by getting the balance and then calculating the new balance
     const balanceResponse = await getWalletBalance();
     
     if (!balanceResponse.success) {
@@ -44,17 +75,16 @@ export const chargeWallet = async (amount: number): Promise<{
     
     const currentBalance = balanceResponse.data?.universal_wallet?.balance || 0;
     
+    // Double-check if balance is sufficient
     if (currentBalance < amount) {
       return { 
         success: false, 
-        error: 'Insufficient balance' 
+        error: `Insufficient balance. Needed: ₦${amount}, Available: ₦${currentBalance}` 
       };
     }
     
     // Simulate successful charge
     const newBalance = currentBalance - amount;
-    
-    // In a real implementation, you would make an API call to update the balance
     console.log(`Charged wallet: -₦${amount}. New balance: ₦${newBalance}`);
     
     return { 
@@ -79,6 +109,8 @@ export const addFundsToWallet = async (amount: number): Promise<{
   error?: string;
 }> => {
   try {
+    console.log(`Adding funds: +₦${amount}`);
+    
     // In a real implementation, you would make an API call to add funds
     // For now, we'll simulate it
     

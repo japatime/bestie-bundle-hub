@@ -3,8 +3,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { purchaseAirtime } from "@/lib/services/airtime";
 import { purchaseData } from "@/lib/services/data";
-import { getWalletBalance } from "@/lib/services/wallet";
-import { chargeWallet } from "@/lib/services/wallet";
+import { getWalletBalance, chargeWallet } from "@/lib/services/wallet";
 
 export interface PlanDetails {
   name: string;
@@ -31,8 +30,11 @@ export const usePurchase = () => {
     setIsLoading(true);
     
     try {
-      // Step 1: Check wallet balance
+      console.log("Starting purchase process for:", planDetails);
+      
+      // Step 1: Get fresh balance check
       const balanceResponse = await getWalletBalance();
+      console.log("Balance API Response:", balanceResponse);
       
       if (!balanceResponse.success) {
         throw new Error("Failed to check wallet balance");
@@ -40,12 +42,14 @@ export const usePurchase = () => {
       
       const currentBalance = balanceResponse.data?.universal_wallet?.balance || 0;
       
+      // Detailed balance check with improved error message
       if (currentBalance < planDetails.cost) {
-        throw new Error("Insufficient balance");
+        throw new Error(`Insufficient balance. Needed: ₦${planDetails.cost}, Available: ₦${currentBalance}`);
       }
 
       // Step 2: Charge wallet
       const chargeResult = await chargeWallet(planDetails.cost);
+      console.log("Charge result:", chargeResult);
       
       if (!chargeResult.success) {
         throw new Error("Failed to charge wallet");
@@ -70,6 +74,8 @@ export const usePurchase = () => {
           planDetails.package_code
         );
       }
+      
+      console.log("Purchase API Response:", purchaseResult);
 
       if (!purchaseResult.success) {
         // Refund the wallet if purchase fails
@@ -99,6 +105,8 @@ export const usePurchase = () => {
 
       return result;
     } catch (error) {
+      console.error("Full Error:", error);
+      
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       
       // Send notification about the failure
@@ -115,10 +123,14 @@ export const usePurchase = () => {
   };
 
   const refundWallet = async (amount: number) => {
-    // In a real implementation, you would have an API call to refund the wallet
-    // For now, we'll simulate it with a log
-    console.log(`Refunding ${amount} to wallet`);
-    return { success: true };
+    try {
+      console.log(`Refunding ${amount} to wallet`);
+      // In a real implementation, you would have an API call to refund the wallet
+      return { success: true };
+    } catch (error) {
+      console.error("Refund error:", error);
+      return { success: false };
+    }
   };
 
   const recordTransaction = async (transactionData: {
@@ -130,7 +142,6 @@ export const usePurchase = () => {
   }) => {
     try {
       // In a real implementation, you would save this to a database
-      // For now, we'll just log it
       console.log("Transaction recorded:", transactionData);
       
       // Optionally save to localStorage for demo purposes
@@ -167,7 +178,8 @@ export const usePurchase = () => {
 
   const syncWalletBalance = async () => {
     try {
-      await getWalletBalance();
+      const response = await getWalletBalance();
+      console.log("Balance synced:", response);
       return true;
     } catch (error) {
       console.error("Failed to sync balance:", error);
