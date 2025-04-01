@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
 import MobileNav from "@/components/layout/MobileNav";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { 
   Card, 
   CardContent, 
@@ -17,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { getDataPlans, purchaseData, vendDataFromWallet } from "@/lib/services";
-import { Loader, Phone, Check, X, Wifi } from "lucide-react";
+import { Loader, Phone, Check, X, Wifi, ExternalLink, RefreshCw } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
@@ -27,13 +28,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface DataPlan {
-  id: number;
-  name: string;
-  code: string;
-  price: number;
+  network_operator: string;
+  plan_summary: string;
+  package_code: string;
+  plan_id: number;
   validity: string;
+  regular_price: number;
 }
 
 const Data = () => {
@@ -45,40 +48,25 @@ const Data = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [useWalletBalance, setUseWalletBalance] = useState(true);
-  const [dataPlans, setDataPlans] = useState<DataPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<DataPlan | null>(null);
-  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [processType, setProcessType] = useState<'instant' | 'queue'>('instant');
+  const [customerReference, setCustomerReference] = useState("");
   
-  // Fetch data plans when network changes
-  useEffect(() => {
-    const fetchDataPlans = async () => {
-      setLoadingPlans(true);
-      try {
-        // In a real implementation, this would fetch from the API
-        // For now, we'll mock some data plans
-        const mockPlans = [
-          { id: 1, name: "1GB - 30 Days", code: `${network}_sme_1gb`, price: 300, validity: "30 days" },
-          { id: 2, name: "2GB - 30 Days", code: `${network}_sme_2gb`, price: 600, validity: "30 days" },
-          { id: 3, name: "5GB - 30 Days", code: `${network}_sme_5gb`, price: 1500, validity: "30 days" },
-          { id: 4, name: "10GB - 30 Days", code: `${network}_sme_10gb`, price: 2500, validity: "30 days" }
-        ];
-        
-        setDataPlans(mockPlans);
-        setSelectedPlan(null);
-      } catch (error) {
-        console.error("Error fetching data plans:", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch data plans. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingPlans(false);
-      }
-    };
+  // Fetch data plans
+  const { data: dataPlans, isLoading: loadingPlans, refetch } = useQuery({
+    queryKey: ["dataPlans", network],
+    queryFn: () => getDataPlans(network),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Filter plans for the current network
+  const filteredPlans = React.useMemo(() => {
+    if (!dataPlans?.data) return [];
     
-    fetchDataPlans();
-  }, [network, toast]);
+    return dataPlans.data.filter((plan: DataPlan) => 
+      plan.network_operator === network
+    );
+  }, [dataPlans, network]);
 
   const handleBuyData = async () => {
     if (!phoneNumber.trim()) {
@@ -103,18 +91,18 @@ const Data = () => {
     
     try {
       if (useWalletBalance) {
-        // Use wallet balance for purchase
+        // Use local wallet balance for purchase (demo)
         const success = await purchaseDataFromWallet(
           network, 
           phoneNumber, 
-          selectedPlan.code, 
-          selectedPlan.price
+          selectedPlan.package_code, 
+          selectedPlan.regular_price
         );
         
         if (success) {
           toast({
             title: "Purchase Successful",
-            description: `${selectedPlan.name} data purchase for ${phoneNumber} completed.`,
+            description: `${selectedPlan.plan_summary} data purchase for ${phoneNumber} completed.`,
           });
         } else {
           toast({
@@ -125,11 +113,27 @@ const Data = () => {
         }
       } else {
         // Use direct API purchase
-        const response = await purchaseData(
-          phoneNumber, 
-          selectedPlan.code,
-          selectedPlan.price.toString()
-        );
+        let response;
+        
+        if (processType === 'instant') {
+          // Use vend data from wallet with instant processing
+          response = await vendDataFromWallet(
+            phoneNumber, 
+            selectedPlan.package_code,
+            'instant',
+            undefined,
+            customerReference || undefined
+          );
+        } else {
+          // Use standard data purchase
+          response = await purchaseData(
+            phoneNumber, 
+            selectedPlan.package_code,
+            selectedPlan.regular_price.toString(),
+            undefined,
+            customerReference || undefined
+          );
+        }
         
         if (response.success) {
           toast({
@@ -169,8 +173,18 @@ const Data = () => {
       <MainLayout>
         <div className="pt-16 md:pt-0">
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold">Buy Data</h2>
-            <p className="text-muted-foreground">Purchase data for any phone number</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Buy Data</h2>
+                <p className="text-muted-foreground">Purchase data for any phone number</p>
+              </div>
+              <Button variant="outline" asChild>
+                <Link to="/data-plans">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View All Plans
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {useWalletBalance && (
@@ -226,21 +240,27 @@ const Data = () => {
 
                   {/* Data Plan Selection */}
                   <div className="space-y-2">
-                    <Label>Select Data Plan</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Select Data Plan</Label>
+                      <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={loadingPlans}>
+                        <RefreshCw className={`h-4 w-4 ${loadingPlans ? 'animate-spin' : ''}`} />
+                      </Button>
+                    </div>
                     <Select 
                       onValueChange={(value) => {
-                        const plan = dataPlans.find(p => p.id === parseInt(value));
+                        const plan = filteredPlans.find((p: DataPlan) => p.package_code === value);
                         setSelectedPlan(plan || null);
                       }}
-                      value={selectedPlan?.id.toString()}
+                      value={selectedPlan?.package_code}
+                      disabled={loadingPlans || filteredPlans.length === 0}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder={loadingPlans ? "Loading plans..." : "Select a data plan"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {dataPlans.map((plan) => (
-                          <SelectItem key={plan.id} value={plan.id.toString()}>
-                            {plan.name} - ₦{plan.price.toLocaleString()}
+                        {filteredPlans.map((plan: DataPlan) => (
+                          <SelectItem key={plan.package_code} value={plan.package_code}>
+                            {plan.plan_summary} - ₦{plan.regular_price.toLocaleString()}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -266,6 +286,44 @@ const Data = () => {
                       </Label>
                     </div>
                   </div>
+
+                  {/* Processing Type - Only show when not using wallet balance */}
+                  {!useWalletBalance && (
+                    <div className="space-y-2 pt-2 border-t">
+                      <Label>Processing Type</Label>
+                      <RadioGroup 
+                        defaultValue="instant"
+                        value={processType}
+                        onValueChange={(value) => setProcessType(value as 'instant' | 'queue')}
+                        className="flex flex-col space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="instant" id="instant" />
+                          <Label htmlFor="instant">Instant (Receive immediate status)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="queue" id="queue" />
+                          <Label htmlFor="queue">Queue (Faster request processing)</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  )}
+
+                  {/* Customer Reference - Only show when not using wallet balance */}
+                  {!useWalletBalance && (
+                    <div className="space-y-2">
+                      <Label htmlFor="reference">Customer Reference (Optional)</Label>
+                      <Input 
+                        id="reference" 
+                        placeholder="Enter a unique reference" 
+                        value={customerReference} 
+                        onChange={(e) => setCustomerReference(e.target.value)} 
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        A unique identifier to help you track this purchase
+                      </p>
+                    </div>
+                  )}
 
                   {/* Submit Button */}
                   <Button 
@@ -303,12 +361,12 @@ const Data = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Data Plan</span>
-                  <span className="font-medium">{selectedPlan?.name || "---"}</span>
+                  <span className="font-medium">{selectedPlan?.plan_summary || "---"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
                   <span className="font-medium">
-                    {selectedPlan ? `₦${selectedPlan.price.toLocaleString()}` : "---"}
+                    {selectedPlan ? `₦${selectedPlan.regular_price.toLocaleString()}` : "---"}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -331,11 +389,19 @@ const Data = () => {
                     )}
                   </span>
                 </div>
+                {!useWalletBalance && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Processing</span>
+                    <span className="font-medium">
+                      {processType === 'instant' ? 'Instant' : 'Queue'}
+                    </span>
+                  </div>
+                )}
                 <div className="pt-4 border-t">
                   <div className="flex justify-between text-lg">
                     <span>Total</span>
                     <span className="font-bold">
-                      {selectedPlan ? `₦${selectedPlan.price.toLocaleString()}` : "---"}
+                      {selectedPlan ? `₦${selectedPlan.regular_price.toLocaleString()}` : "---"}
                     </span>
                   </div>
                 </div>

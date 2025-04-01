@@ -9,6 +9,7 @@ export interface ApiResponse {
   status: string;
   message: string;
   details?: any;
+  data?: any;
 }
 
 /**
@@ -23,9 +24,14 @@ const API_TOKEN = '922|6Tydbi6ek1BB9JeNDhWXxyz9kz4L7iFXJ3f6vBGQ';
 /**
  * Fetches available data plans for a specific network
  */
-export const getDataPlans = async (network: string): Promise<ApiResponse> => {
+export const getDataPlans = async (network?: string): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/data/plans?network=${network}`, {
+    let url = `${API_BASE_URL}/data/plans`;
+    if (network) {
+      url += `?network=${network}`;
+    }
+    
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`,
         'Accept': 'application/json',
@@ -88,9 +94,25 @@ export const purchaseAirtime = async (
 export const purchaseData = async (
   phone: string,
   package_code: string,
-  max_amount?: string
+  max_amount?: string,
+  callback_url?: string,
+  customer_reference?: string
 ): Promise<ApiResponse> => {
   try {
+    const requestBody: Record<string, any> = {
+      phone,
+      package_code,
+      max_amount: max_amount || "5000"
+    };
+    
+    if (callback_url) {
+      requestBody.callback_url = callback_url;
+    }
+    
+    if (customer_reference) {
+      requestBody.customer_reference = customer_reference;
+    }
+    
     const response = await fetch(`${API_BASE_URL}/data`, {
       method: 'POST',
       headers: {
@@ -98,11 +120,7 @@ export const purchaseData = async (
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        phone,
-        package_code,
-        max_amount: max_amount || "5000" // Default max amount
-      })
+      body: JSON.stringify(requestBody)
     });
     
     return await response.json();
@@ -122,9 +140,25 @@ export const purchaseData = async (
 export const vendDataFromWallet = async (
   phone: string,
   package_code: string,
-  process_type: 'instant' | 'queue' = 'instant'
+  process_type: 'instant' | 'queue' = 'instant',
+  callback_url?: string,
+  customer_reference?: string
 ): Promise<ApiResponse> => {
   try {
+    const requestBody: Record<string, any> = {
+      phone,
+      package_code,
+      process_type
+    };
+    
+    if (callback_url) {
+      requestBody.callback_url = callback_url;
+    }
+    
+    if (customer_reference) {
+      requestBody.customer_reference = customer_reference;
+    }
+    
     const response = await fetch(`${API_BASE_URL}/data/wallet`, {
       method: 'POST',
       headers: {
@@ -132,11 +166,7 @@ export const vendDataFromWallet = async (
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        phone,
-        package_code,
-        process_type
-      })
+      body: JSON.stringify(requestBody)
     });
     
     return await response.json();
@@ -146,6 +176,30 @@ export const vendDataFromWallet = async (
       success: false, 
       status: 'failed', 
       message: 'Failed to vend data from wallet' 
+    };
+  }
+};
+
+/**
+ * Get wallet balance
+ */
+export const getWalletBalance = async (): Promise<ApiResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/balance`, {
+      headers: {
+        'Authorization': `Bearer ${API_TOKEN}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching wallet balance:', error);
+    return { 
+      success: false, 
+      status: 'failed', 
+      message: 'Failed to fetch wallet balance' 
     };
   }
 };
