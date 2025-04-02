@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useLocation } from "react-router-dom";
 import MobileNav from "@/components/layout/MobileNav";
 import AirtimePurchaseForm from "@/components/airtime/AirtimePurchaseForm";
+import RecentAirtimeTransactions from "@/components/airtime/RecentAirtimeTransactions";
 
 const Airtime = () => {
   const location = useLocation();
@@ -42,9 +43,7 @@ const Airtime = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  No recent transactions found
-                </div>
+                <RecentAirtimeTransactions />
               </CardContent>
             </Card>
           </div>
