@@ -1,9 +1,9 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-// Default to empty strings to prevent runtime errors, but log warnings
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+// Get environment variables with clear error messages
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Provide clear error messages if credentials are missing
 if (!supabaseUrl) {
@@ -14,17 +14,41 @@ if (!supabaseKey) {
   console.error("Missing Supabase Anon Key. Please set VITE_SUPABASE_ANON_KEY in your environment variables.");
 }
 
-// Create client with fallbacks to prevent runtime crashes
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseKey,
-  {
+// Create a dummy client when credentials are missing (for development only)
+// This prevents runtime crashes while providing a clear indication something is wrong
+const createSupabaseClient = () => {
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn("Creating mock Supabase client due to missing credentials");
+    
+    // Return a mock client that logs operations instead of failing
+    return {
+      auth: {
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signUp: () => Promise.resolve({ error: new Error("Supabase not configured") }),
+        signInWithPassword: () => Promise.resolve({ error: new Error("Supabase not configured") }),
+        signOut: () => Promise.resolve({ error: null })
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: new Error("Supabase not configured") })
+          })
+        })
+      })
+    };
+  }
+  
+  // Create the real client when credentials are available
+  return createClient(supabaseUrl, supabaseKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true
     }
-  }
-);
+  });
+};
+
+export const supabase = createSupabaseClient();
 
 // Define role types
 export enum UserRole {
