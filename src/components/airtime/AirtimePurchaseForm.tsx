@@ -7,16 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { usePurchase, PlanDetails } from "@/hooks/usePurchase";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 const formSchema = z.object({
   phone: z.string().min(11).max(11),
   network: z.string().min(1),
-  amount: z.coerce.number().min(1), // Using coerce.number() to ensure type conversion
+  amount: z.coerce.number().min(1),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -25,13 +27,14 @@ const AirtimePurchaseForm = () => {
   const { balance, isLoading: isBalanceLoading } = useWalletBalance();
   const { purchaseAirtimeOrData, isLoading: isPurchasing } = usePurchase();
   const [transactionResult, setTransactionResult] = useState<{ success: boolean; message: string } | null>(null);
+  const { user } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       phone: "",
       network: "MTN",
-      amount: 0, // Changed from "" to 0 to match the number type
+      amount: 0,
     },
   });
 
@@ -71,6 +74,18 @@ const AirtimePurchaseForm = () => {
           Wallet Balance: <span className="font-medium">₦{walletBalance.toLocaleString()}</span>
         </div>
       </div>
+      
+      {!user && (
+        <Alert variant="warning" className="bg-amber-50 border-amber-200">
+          <AlertDescription className="flex flex-col gap-3">
+            <p>Please login for optimal experience and to access your transaction history.</p>
+            <Link to="/auth" className="flex items-center gap-2 text-primary font-medium">
+              <LogIn size={16} />
+              Login or create an account
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {transactionResult && (
         <Alert variant={transactionResult.success ? "default" : "destructive"}>

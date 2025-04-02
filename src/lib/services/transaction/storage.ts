@@ -25,10 +25,10 @@ export const recordTransaction = async (transactionData: Omit<Transaction, "id" 
     if (session?.session?.user) {
       const userId = session.session.user.id;
       
-      // Record in Supabase if connected (will be stored when user connects)
+      // Record in Supabase if connected
       if (supabase) {
         try {
-          // Fixed: Proper chain for insert operation
+          // Fixed: Proper chaining for Supabase operations
           const { error } = await supabase
             .from("transactions")
             .insert({
@@ -69,7 +69,7 @@ export const getTransactions = async (): Promise<Transaction[]> => {
     const userId = session.session.user.id;
     
     try {
-      // Fixed: Proper chain for select with ordering
+      // Fixed: Proper chaining for Supabase operations with ordering
       const { data: supabaseTransactions, error } = await supabase
         .from("transactions")
         .select("*")
