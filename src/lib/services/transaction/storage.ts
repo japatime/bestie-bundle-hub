@@ -28,12 +28,13 @@ export const recordTransaction = async (transactionData: Omit<Transaction, "id" 
       // Record in Supabase if connected (will be stored when user connects)
       if (supabase) {
         try {
+          // Fixed: Proper chain for insert operation
           const { error } = await supabase
             .from("transactions")
-            .insert([{
+            .insert({
               ...transactionData,
               user_id: userId
-            }]);
+            });
           
           if (error) {
             console.error("Error saving transaction to Supabase:", error);
@@ -68,6 +69,7 @@ export const getTransactions = async (): Promise<Transaction[]> => {
     const userId = session.session.user.id;
     
     try {
+      // Fixed: Proper chain for select with ordering
       const { data: supabaseTransactions, error } = await supabase
         .from("transactions")
         .select("*")

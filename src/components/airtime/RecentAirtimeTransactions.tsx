@@ -1,10 +1,8 @@
-
 import React, { useEffect, useState } from "react";
-import { getTransactions } from "@/lib/services/transaction";
+import { getTransactions, Transaction } from "@/lib/services/transaction";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
-import { Transaction } from "@/lib/services/transaction";
 
 const RecentAirtimeTransactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -61,7 +59,7 @@ const RecentAirtimeTransactions = () => {
   return (
     <div className="space-y-4">
       {transactions.map((transaction) => (
-        <Card key={transaction.id || transaction.reference} className="bg-card/50">
+        <Card key={transaction.id} className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex justify-between">
               <div>

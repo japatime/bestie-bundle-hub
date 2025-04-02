@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 export type TransactionType = "airtime_purchase" | "data_purchase" | "wallet_funding";
 
 export interface Transaction {
-  id?: string;
+  id: string; // Changed from optional to required to match expected type in components
   type: TransactionType;
   amount: number;
   description: string;
